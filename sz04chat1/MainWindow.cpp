@@ -34,6 +34,30 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent)
 
     connect(send,SIGNAL(clicked()),this,SLOT(onSend()));
     connect(setup,SIGNAL(clicked()),this,SLOT(onSetup()));
+
+    initUserList();
+}
+
+void MainWindow::initUserList()
+{
+    this->list->clear();
+    this->list->addItem("所有人@"+chat.broadcast_ip);
+}
+
+QString MainWindow::getSelectIp()
+{
+    /* 得到 ip地址 */
+    QString text = list->currentItem()->text();
+    qDebug() << "item text is:" << text; // name@ip
+
+    QStringList stringList = text.split('@');
+    if(stringList.length() != 2)
+    {
+        qDebug() << stringList;
+        return "";
+    }
+    QString ip = stringList.at(1);
+    return ip;
 }
 
 void MainWindow::onNewUser(QString name, QString ip)
@@ -53,9 +77,12 @@ void MainWindow::onNewUser(QString name, QString ip)
     this->list->addItem(name + "@" + ip);
 }
 
-void MainWindow::onNewContent(QString name, QString content)
+void MainWindow::onNewContent(QString name, QString content,bool broadcast)
 {
-    msgshow->append(name+" say:"+content);
+    if(broadcast)
+        msgshow->append(name+"对大家说: "+content);
+    else
+        msgshow->append(name+"对我说: "+content);
 }
 
 void MainWindow::onSend()
@@ -78,7 +105,7 @@ void MainWindow::onSend()
     {
         return;
     }
-    chat.sendMsg(content,ip,false);
+    chat.sendMsg(content,ip);
     //整理界面
     msginput->clear();
     msgshow->append("i say:"+content);
@@ -109,7 +136,9 @@ void MainWindow::onSetup()
     dlg.exec();
     //得到当前用户的选择,并赋值给chat对象
     chat.broadcast_ip = combo->itemData(combo->currentIndex()).toString();
-    chat.create_socket(combo->currentText());
+    //chat.create_socket(combo->currentText());
     //重新发送上线通知
     chat.sendOnline();
+    //userList清理
+    initUserList();
 }

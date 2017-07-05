@@ -21,6 +21,10 @@ class MainWindow : public QWidget
     Q_OBJECT
 public:
     explicit MainWindow(QWidget *parent = 0);
+
+    void initUserList();
+    Chat chat;
+
     QListWidget* list;
     QTextBrowser* msgshow;
     QTextEdit* msginput;
@@ -28,14 +32,15 @@ public:
     QPushButton* send;
     QPushButton* sendfile;
 
-    Chat chat;
+    QString getSelectIp();
+
 signals:
 
 public slots:
     void onSend();
     void onSetup();
     void onNewUser(QString name,QString ip);
-    void onNewContent(QString name,QString content);
+    void onNewContent(QString name,QString content,bool broadcast);
 
 };
 

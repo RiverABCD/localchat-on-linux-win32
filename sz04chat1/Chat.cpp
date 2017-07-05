@@ -39,6 +39,7 @@ void Chat::run()
             //inet_ntoa_r(addr.sin_addr,ip,sizeof(ip));
             handleMsg(doc.object(),ip);
         }
+
         else
         {
             QThread::msleep(100);
@@ -174,7 +175,7 @@ void Chat::send(const QJsonObject &obj, QString ip)
     sendto(udp_fd,buf.data(),buf.size(),0,(struct sockaddr*)&addr,sizeof(addr));
 }
 
-void Chat::sendMsg(QString content, QString ip,bool broadcast)
+void Chat::sendMsg(QString content, QString ip)
 {
 #if 0
     {
@@ -185,7 +186,8 @@ void Chat::sendMsg(QString content, QString ip,bool broadcast)
 #endif
     QJsonObject obj;
     obj.insert(CMD,CHAT);
-    obj.insert(BROADCAST1,broadcast);
+    //obj.insert(BROADCAST1,broadcast);
+    obj.insert(BROADCAST1,ip.indexOf("255") != -1);
     obj.insert(CONTENT,content);
     obj.insert(NAME,account);
     send(obj,ip);

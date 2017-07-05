@@ -66,7 +66,7 @@ public:
     void create_socket(QString ip);
     QString broadcast_ip;
     void send(const QJsonObject &obj,QString ip);
-    void sendMsg(QString content,QString ip,bool broadcast);
+    void sendMsg(QString content,QString ip);
     void sendOnline();
 
 signals:
