@@ -8,6 +8,11 @@
 #include <QPushButton>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <QDialog>
+#include <QLabel>
+#include <QComboBox>
+#include <QVariant>
+
 #include "Chat.h"
 
 
@@ -27,9 +32,11 @@ public:
 signals:
 
 public slots:
+    void onSend();
+    void onSetup();
     void onNewUser(QString name,QString ip);
     void onNewContent(QString name,QString content);
-    void onSend();
+
 };
 
 #endif // MAINWINDOW_H

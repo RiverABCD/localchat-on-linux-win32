@@ -3,7 +3,9 @@
 Chat::Chat(QObject *parent) : QObject(parent)
 {
     ips = getSysIps();
-    name = getSysName();
+    account = getSysName();
+    broadcast_ip = "255.255.255.255";
+    udp_fd = -1;
 #ifdef WIN32
     //如果是windows环境下，初始化socket运行环境
     WSADATA wsaData;
@@ -37,53 +39,25 @@ void Chat::run()
             //inet_ntoa_r(addr.sin_addr,ip,sizeof(ip));
             handleMsg(doc.object(),ip);
         }
+        else
+        {
+            QThread::msleep(100);
+        }
+        /*
         else if(ret < 0 && errno != EINTR)
         {
             qDebug() << "error recv";
-            exit(2);
+            break;
         }
+        */
     }
 }
 
 void Chat::init()
 {
-    this->udp_fd = socket(AF_INET,SOCK_DGRAM,0);
-    if(this->udp_fd < 0)
-    {
-        qDebug()<<"create socket failed";
-        exit(1);
-    }
+    create_socket("0.0.0.0");
 
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(9999);
-    addr.sin_addr.s_addr = INADDR_ANY;
-
-    int ret = bind(udp_fd,(struct sockaddr*)&addr,sizeof(addr));
-    if(ret != 0)
-    {
-        qDebug() << "error bind";
-        exit(1);
-    }
-    //设置socket,可以发送广播
-    int arg = 1;
-#ifdef WIN32
-    setsockopt(udp_fd,SOL_SOCKET,SO_BROADCAST,(char*)&arg,sizeof(arg));
-#else
-    setsockopt(udp_fd,SOL_SOCKET,SO_BROADCAST,&arg,sizeof(arg));
-#endif
-    //发送上线广播
-    /*
-     * {
-     *      cmd:online,
-     *      name:account-name
-     * }
-     */
-    QJsonObject obj;
-    obj.insert(CMD,ONLINE);
-    obj.insert(NAME,name);
-
-    send(obj,"192.168.19.255");
+    sendOnline();
     //创建接收线程
     pthread_create(&tid,NULL,recv_thread,this);
 }
@@ -104,7 +78,7 @@ void Chat::handleMsg(const QJsonObject &obj, QString ip)
         //回应这个用户
         QJsonObject resp;
         resp.insert(CMD,ONLINEACK);
-        resp.insert(NAME,name);
+        resp.insert(NAME,this->account);
         send(resp,ip);
 
     }
@@ -155,6 +129,40 @@ QStringList Chat::getSysIps()
     return ret;
 }
 
+void Chat::create_socket(QString ip)
+{
+    if(this->udp_fd != -1)
+    {
+        close(this->udp_fd);
+    }
+
+    this->udp_fd = socket(AF_INET,SOCK_DGRAM,0);
+    if(this->udp_fd < 0)
+    {
+        qDebug()<<"create socket failed";
+        exit(1);
+    }
+
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(9999);
+    addr.sin_addr.s_addr = inet_addr(ip.toUtf8().data());
+
+    int ret = bind(udp_fd,(struct sockaddr*)&addr,sizeof(addr));
+    if(ret != 0)
+    {
+        qDebug() << "error bind";
+        exit(1);
+    }
+    //设置socket,可以发送广播
+    int arg = 1;
+#ifdef WIN32
+    setsockopt(udp_fd,SOL_SOCKET,SO_BROADCAST,(char*)&arg,sizeof(arg));
+#else
+    setsockopt(udp_fd,SOL_SOCKET,SO_BROADCAST,&arg,sizeof(arg));
+#endif
+}
+
 void Chat::send(const QJsonObject &obj, QString ip)
 {
     //通过obj构造buf,并将上面报文转换成buf
@@ -179,8 +187,23 @@ void Chat::sendMsg(QString content, QString ip,bool broadcast)
     obj.insert(CMD,CHAT);
     obj.insert(BROADCAST1,broadcast);
     obj.insert(CONTENT,content);
-    obj.insert(NAME,name);
+    obj.insert(NAME,account);
     send(obj,ip);
+}
+
+void Chat::sendOnline()
+{
+    foreach(QString ip,others.keys())
+    {
+        delete others[ip];
+    }
+    others.clear();
+
+    QJsonObject obj;
+    obj.insert(CMD,ONLINE);
+    obj.insert(NAME,account);
+
+    send(obj,broadcast_ip);
 }
 
 void Chat::addUser(QString ip, QString name)
